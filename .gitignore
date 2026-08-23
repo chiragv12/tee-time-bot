@@ -1,0 +1,15 @@
+# secrets / captured auth material
+curls.md
+.env
+*.session.json
+storage_state.json
+
+# python
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# node (future web frontend)
+node_modules/
+.next/
