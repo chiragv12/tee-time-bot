@@ -40,7 +40,7 @@ class TeeItUpClient:
         self._session_token = body["sessionToken"]
         self.customer = body["customer"]
 
-    async def search_tee_times(self, date: str, facility_ids: str) -> dict:
+    async def search_tee_times(self, date: str, facility_ids: str) -> list[dict]:
         response = await self._http.get(
             "/v2/tee-times",
             params={"date": date, "facilityIds": facility_ids, "returnPromotedRates": "true"},

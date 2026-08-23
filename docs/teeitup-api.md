@@ -41,6 +41,33 @@ session: <sessionToken>
 
 `facilityIds` maps to the `course=` query param on the frontend URL — multiple courses can be searched in one call.
 
+Response (confirmed via real capture) is a top-level **array**, one entry per course/day:
+```json
+[{
+  "dayInfo": {...},
+  "courseId": "5e3d7968ce07ad0100ad93d0",
+  "totalAvailableTeetimes": 19,
+  "teetimes": [{
+    "courseId": "5e3d7968ce07ad0100ad93d0",
+    "teetime": "2026-08-27T19:20:00.000Z",
+    "minPlayers": 1, "maxPlayers": 4,
+    "rates": [{
+      "_id": 235361805,
+      "name": "9 Holes", "holes": 9,
+      "golfnow": {"GolfFacilityId": 7743, "GolfCourseId": 141164},
+      "greenFeeWalking": 3800
+    }, ...]
+  }, ...]
+}]
+```
+Key mapping (all confirmed against a real booking that used these exact values):
+- `teetimes[].courseId` = the Mongo-style `courseId` needed for locking — **no separate lookup table needed**, it comes back per-slot directly from search.
+- `rates[]._id` = `rateId`.
+- `rates[].golfnow.GolfCourseId` = `gncFacilityId` (aka `rateSetId`).
+- `rates[].golfnow.GolfFacilityId` = the short numeric `facilityId`.
+- `rates[].holes` = holes directly.
+- Price/transportation: a `Walking` rate has `greenFeeWalking` (or `dueOnlineWalking`); a `Cart`/riding rate has `greenFeeCart` (or `dueOnlineRiding`) instead. **Values are in cents** (`3800` = $38.00).
+
 ## Booking flow (in the order the UI triggers them)
 
 1. **Get rate/pricing** (fired per visible slot, essentially a price lookup):

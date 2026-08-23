@@ -26,3 +26,25 @@ class BookNowResult(BaseModel):
     success: bool
     order_id: str | None = None
     detail: str
+
+
+class Facility(BaseModel):
+    facility_id: int
+    name: str
+
+
+class TeeTimeSlot(BaseModel):
+    """A currently bookable slot, shaped to feed directly into BookNowRequest."""
+
+    course_id: str
+    facility_id: int
+    rate_id: int
+    gnc_facility_id: int
+    teetime_iso: str
+    local_date: str
+    local_time: str
+    holes: int
+    transportation: str
+    price: float
+    max_players: int
+    course_name: str
