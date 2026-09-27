@@ -9,6 +9,8 @@ uvicorn = {extras = ["standard"], version = "*"}
 httpx = "*"
 pydantic-settings = "*"
 apscheduler = "*"
+sqlalchemy = {extras = ["asyncio"], version = "*"}
+aiosqlite = "*"
 
 [dev-packages]
 pytest = "*"

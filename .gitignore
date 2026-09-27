@@ -9,7 +9,10 @@ __pycache__/
 *.pyc
 .venv/
 venv/
+.coverage
 
 # node (future web frontend)
 node_modules/
 .next/
+*.db
+*.log

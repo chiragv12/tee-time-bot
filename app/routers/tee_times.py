@@ -1,62 +1,28 @@
-from datetime import datetime
-from zoneinfo import ZoneInfo
+from typing import Annotated
 
-from fastapi import APIRouter
+from fastapi import APIRouter, Query
 
 from app.config import settings
-from app.facilities import FACILITY_NAMES
 from app.models import TeeTimeSlot
+from app.services.tee_time_search import search_slots
 from app.services.teeitup_client import TeeItUpClient
 
 router = APIRouter(prefix="/tee-times", tags=["tee-times"])
 
-# MVP scope is fairfax-county-mco only, which is Eastern-time courses.
-SITE_TIMEZONE = ZoneInfo("America/New_York")
 
+@router.get("", response_model=list[TeeTimeSlot], summary="List currently open tee times for a date")
+async def list_tee_times(
+    date: Annotated[str, Query(description="Tee time date, YYYY-MM-DD", examples=["2026-10-03"])],
+    facility_ids: Annotated[
+        str, Query(description="Comma-separated facility ids (see GET /facilities); defaults to all supported")
+    ] = settings.supported_facility_ids,
+) -> list[TeeTimeSlot]:
+    """One entry per bookable option, so the same tee time appears once per holes/walking/cart rate.
 
-def _local_date_time(teetime_iso: str) -> tuple[str, str]:
-    dt = datetime.fromisoformat(teetime_iso.replace("Z", "+00:00")).astimezone(SITE_TIMEZONE)
-    return dt.strftime("%Y-%m-%d"), dt.strftime("%H:%M")
-
-
-def _price_and_transportation(rate: dict) -> tuple[float, str]:
-    if "greenFeeWalking" in rate:
-        return rate["greenFeeWalking"] / 100, "Walking"
-    if "greenFeeCart" in rate:
-        return rate["greenFeeCart"] / 100, "Cart"
-    raise ValueError(f"Unrecognized rate pricing shape: {rate}")
-
-
-@router.get("", response_model=list[TeeTimeSlot])
-async def list_tee_times(date: str, facility_ids: str = settings.supported_facility_ids) -> list[TeeTimeSlot]:
-    """List currently bookable slots (across all rates/holes/transportation options) for a date."""
+    Each entry has everything `POST /bookings/book-now` needs."""
     client = TeeItUpClient()
     try:
         await client.login()
-        days = await client.search_tee_times(date, facility_ids)
-        slots = []
-        for day in days:
-            for teetime in day["teetimes"]:
-                local_date, local_time = _local_date_time(teetime["teetime"])
-                for rate in teetime["rates"]:
-                    price, transportation = _price_and_transportation(rate)
-                    facility_id = rate["golfnow"]["GolfFacilityId"]
-                    slots.append(
-                        TeeTimeSlot(
-                            course_id=teetime["courseId"],
-                            facility_id=facility_id,
-                            rate_id=rate["_id"],
-                            gnc_facility_id=rate["golfnow"]["GolfCourseId"],
-                            teetime_iso=teetime["teetime"],
-                            local_date=local_date,
-                            local_time=local_time,
-                            holes=rate["holes"],
-                            transportation=transportation,
-                            price=price,
-                            max_players=teetime["maxPlayers"],
-                            course_name=FACILITY_NAMES.get(facility_id, f"Facility {facility_id}"),
-                        )
-                    )
-        return slots
+        return await search_slots(client, date, facility_ids)
     finally:
         await client.aclose()
